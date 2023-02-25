@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css">
+    <title>Results</title>
+
+</head>
+<body>
+   <div class="topnav" id="myTopnav">
+      <a href="/Home" title="HOME">Home</a>
+      <a href="/Project" title="PROJECT">Project</a>
+      <a href="/Student" title="STUDENT_DETAILS">Student Details</a>
+      <i class="fa fa-bars"></i>
+      </a>
+  </div>
+  <div class="buttons">
+   <form action="{{ url_for("allData")}}" method="post"><button style="padding: 5px 15px;">More Columns</button> </form>
+   <form action="{{ url_for("someData")}}" method="post"><button style="padding: 5px 17px;">Hide Columns</button> </form>
+   <form action="{{ url_for("paging")}}" method="post"><button style="padding: 5px 43px;" type="submit">paging</button></form>
+  </div>
+ 
+  <main>
+   <fieldset>
+   <legend>Results</legend>
+      <table>
+      <tr>
+            <td>
+                <table>
+                    <thead>
+                        {% if ShowPrice %}
+                        <tr>
+                           <form action="{{ url_for("sortPrices")}}" method="post">
+                              <td><button style="padding: 3px 3px;">Prices</button></td>
+                           </form>
+                        </tr>
+                     
+                        <tr>
+                           <form action="{{ url_for("HidePrices")}}" method="post">
+                              <td><button style="padding: 2px 6px;">Hide</button></td>
+                           </form>
+                        </tr>
+                        {% else %}
+                        <div class="show">
+                           <form action="{{ url_for("showPrices")}}" method="post">
+                              <td style="margin-top: 0px; position: relative;"><button style="padding: 2px 3px;">Show</button></td>
+                           </form>
+                        </div>
+                        {% endif %}
+                    </thead>
+                    <tbody>
+                        {% for row in pricelist %}
+                        <tr>
+                           <td>{{ row }}</td>
+                        </tr>
+                        {% endfor %}
+                     </tbody>
+                </table>
+            </td>
+            <td>
+               <table>
+                   <thead>
+                     {% if ShowCode %}
+                       <tr>
+                           <form action="{{ url_for("sortCodes")}}" method="post"><td><button style="padding: 2px 3px;">AirCodes</button></td></form>
+                       </tr>
+                       <tr>
+                        <form action="{{ url_for("HideCodes")}}" method="post">
+                           <td><button style="padding: 2px 3px;">Hide</button></td>
+                        </form>
+                       </tr>
+                       {% else %}
+                       <form action="{{ url_for("showCode")}}" method="post">
+                        <td><button style="padding: 2px 3px;">Show</button></td>
+                     </form>
+                     {% endif %}
+                   </thead>
+                   <tbody>
+                     {% for row in  airCodes%}
+                        <tr>
+                           {% for cell in row%}
+                              <td>{{ cell }}</td>
+                           {% endfor %}
+                        </tr>
+                     {% endfor %}
+                  </tbody>
+               </table>
+           </td>
+           <td>
+            <table>
+                <thead>
+                  {% if ShowStops %}
+                    <tr>
+                     <form action="{{ url_for("sortStops")}}" method="post"><td><button>Stops</button></td></form>
+                    </tr>
+                    <tr>
+                     <form action="{{ url_for("HideStops")}}" method="post">
+                        <td><button>Hide</button></td>
+                     </form>
+                    </tr>
+                    {% else %}
+                     <form action="{{ url_for("showStops")}}" method="post">
+                       <td><button>Show</button></td>
+                     </form>
+                    {% endif %}
+                </thead>
+                <tbody>
+                  {% for row in  stops%}
+                        <tr>
+                           {% for cell in row%}
+                              <td>{{ cell }}</td>
+                           {% endfor %}
+                        </tr>
+                     {% endfor %}
+               </tbody>
+            </table>
+         </td>
+         <td>
+            <table>
+                <thead>
+                  {% if ShowDate %}
+                    <tr>
+                     <form action="{{ url_for("sortDate")}}" method="post"><td><button>Date</button></td></form>
+                  </tr>
+                  <tr>
+                     <form action="{{ url_for("HideDate")}}" method="post">
+                        <td><button>Hide</button></td>
+                     </form>
+                  </tr>
+                  {% else %}
+                           <form action="{{ url_for("showDate")}}" method="post">
+                              <td><button>Show</button></td>
+                           </form>
+                  {% endif %}
+               </thead>
+               <tbody>
+                {% for row in  date%}
+                     <tr>
+                        <td>{{ row }}</td>
+                     </tr>
+                   {% endfor %}
+               </tbody>
+            </table>
+         </td>
+         <td>
+               <table>
+                  <thead>
+                     {% if ShowMoreColumns %}
+                      <tr>
+                       <form action="{{ url_for("sortSeats")}}" method="post"><td><button>Seats</button></td></form>
+                    </tr>
+                     {% endif %}
+                 </thead>
+                 <tbody>
+                    {% for row in  seats%}
+                         <tr>
+                            <td> {{row}}</td>
+                         </tr>
+                       {% endfor %}
+                   </tbody>
+              </table>
+         </td>
+         <td>
+            <table>
+                <thead>
+                  {% if ShowMoreColumns %}
+                    <tr>
+                        <form action="{{ url_for("sortCabin")}}" method="post"><td><button>Cabin</button></td></form>
+                  </tr>
+                  {% endif %}
+               </thead>
+               <tbody>
+                  {% for row in  cabins%}
+                       <tr>
+                          <td> {{row}}</td>
+                       </tr>
+                     {% endfor %}
+                 </tbody>
+            </table>
+         </td>
+      </tr>
+     </table>
+     {{ pagination.links }}
+   </fieldset>
+ </main>
+   
+<style>
+   body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  
+  .topnav {
+    overflow: hidden;
+    background-color: #333;
+
+  }
+
+ .buttons{
+   position: relative;
+   margin-left: 10px;
+   margin-top: 10px;
+
+ }
+  .topnav a {
+    float: left;
+    display: block;
+    color: #f2f2f2;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-size: 17px;
+  }
+  
+  .topnav a:hover {
+    background-color: #ddd;
+    color: black;
+  }
+  
+  .topnav a.active {
+    background-color: #04AA6D;
+    color: white;
+  }
+  
+  main{
+    flex:50%;
+    margin-top: 35px;
+    padding: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align:initial;
+}
+
+fieldset {
+    background-color: #eeeeee;
+    height: 1600px;
+    width: 400px;
+  }
+  
+  legend {
+    border: black solid;
+    background-color: gray;
+    color: white;
+    padding:5px 10px;
+    font-size: 20px;
+    text-align:center;
+  }
+
+  @media screen and (max-width: 400) {
+    .topnav a:not(:first-child) {display: none;}
+    .topnav a.icon {
+      float: right;
+      display: block;
+    }
+  }
+  
+  @media screen and (max-width: 401) {
+    .topnav.responsive {position: relative;}
+    .topnav.responsive a {
+      float: none;
+      display: block;
+      text-align: left;
+    }
+  }
+</style>
+  
+</body>
+</html>
