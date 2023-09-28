@@ -1,7 +1,12 @@
 ## **Flight Search App with Python-Flask**
-It is an application that shows flights based on the user's chosen **country code** and **dates**.
-It is built with the **Flask framework**, and whenever the user searches for a flight, the application makes API calls to Amadeus to pull the appropriate information.
-In order to run the application in Windows, one must execute the following commands:
+It is an app that displays flights based on the user's selected **country code** and **dates**. The user has the possibility to retrieve all the codes of each country in order to search for the flight he wants.
+The project is built with the **Flask Framework** and every time the user searches for a flight, the application makes API calls to Amadeus to pull the appropriate information.
 
+## **Run app**
+To run the application on Windows, you need to execute the following commands:
+installation of all necessary libraries
 ```pip install -r req.txt```  
+running application
 ```python Flask.py```
+open the following address in the browser
+http://127.0.0.1:5000/
