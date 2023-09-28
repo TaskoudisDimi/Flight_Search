@@ -2,6 +2,7 @@ from flask import Flask, render_template, request
 from amadeus import Client, ResponseError
 import logging
 from flask_paginate import Pagination, get_page_parameter,get_page_args
+import json
 
 app = Flask(__name__)
 
@@ -19,6 +20,14 @@ ShowDate = True
 
 ShowMoreColumns = True
 
+# Load the JSON data once when the app starts
+with open('countries.json', 'r') as json_file:
+    data = json.load(json_file)
+
+
+
+
+
 #Route basic HTMLs
 @app.route('/Home', methods=['GET', 'POST'])
 def home():
@@ -31,6 +40,18 @@ def project():
 @app.route('/Student', methods=['GET', 'POST'])
 def student():
     return render_template('Student_Details.html') 
+
+#Route basic HTMLs
+@app.route('/getCountryCodes', methods=['GET', 'POST'])
+def getCountryCodes():
+    search_term = request.form.get('search_term', '')
+
+    # Filter the data based on the search term
+    filtered_data = [entry for entry in data if search_term.lower() in entry['country_name'].lower()]
+
+    return render_template('CountryCodes.html', data=filtered_data, search_term=search_term)
+
+    
 
 
 # Display Data Region
@@ -234,6 +255,9 @@ def showStops():
         return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
     except ResponseError as error:
         print(error)
+
+
+
 
 
 if __name__ == '__main__':

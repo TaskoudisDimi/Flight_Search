@@ -3,24 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
+    <title>Country Codes</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">Country Codes</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav">
             <li class="nav-item">
-                <a class="nav-link active" href="/Home">Home</a>
+                <a class="nav-link" href="/Home">Home</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="/Project">Project</a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item active">
                 <a class="nav-link" href="/Student">Student Details</a>
             </li>
         </ul>
@@ -28,19 +29,36 @@
 </nav>
 
 <div class="container mt-4">
-    <h2>Project</h2>
-    <fieldset>
-        <p>In the context of a lesson, this page is a project where one can search for air routes based on the <b>destinations</b> and the <b>date</b> set by the user.</p>
-        <p>The results include information on:</p>
-        <ul>
-            <li>Dates</li>
-            <li>Prices</li>
-            <li>Number of stops</li>
-            <li>Airport Code</li>
-            <li>Seat type</li>
-            <li>Cabin</li>
-        </ul>
-    </fieldset>
+    <h2>Country Codes</h2>
+    <form method="POST" action="/getCountryCodes" class="mb-3">
+        <div class="input-group">
+            <input type="text" name="search_term" class="form-control" placeholder="Search for a country" value="{{ search_term }}">
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </div>
+    </form>
+
+    <form method="GET" action="/Project">
+        <button type="submit" class="btn btn-secondary">Back to Search</button>
+    </form>
+
+    <table class="table table-bordered mt-3">
+        <thead class="thead-dark">
+            <tr>
+                <th>Country Name</th>
+                <th>Short Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in data %}
+                <tr>
+                    <td>{{ entry.country_name }}</td>
+                    <td>{{ entry.country_short_name }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
