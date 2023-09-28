@@ -3,10 +3,10 @@ It is an app that displays flights based on the user's selected **country code**
 The project is built with the **Flask Framework** and every time the user searches for a flight, the application makes API calls to Amadeus to pull the appropriate information.
 
 ## **Run app**
-To run the application on Windows, you need to execute the following commands:
+To run the application on Windows, you need to execute the following commands: 
 installation of all necessary libraries
-```pip install -r req.txt```  
-running application
-```python Flask.py```
-open the following address in the browser
+```pip install -r req.txt``` 
+running application 
+```python Flask.py``` 
+open the following address in the browser 
 http://127.0.0.1:5000/
