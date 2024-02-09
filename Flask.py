@@ -26,8 +26,6 @@ with open('countries.json', 'r') as json_file:
 
 
 
-
-
 #Route basic HTMLs
 @app.route('/Home', methods=['GET', 'POST'])
 def home():
@@ -74,13 +72,14 @@ def getData():
             length = len(response.data)
             print("length of data is : " + str(length))
            
-            for x in range(0,length):
+            for x in range(0, length):
                 priceList.append(response.data[int(x)]['price']['grandTotal'])
                 AirCodes.append(response.data[int(x)]['validatingAirlineCodes'])
                 Date.append(response.data[int(x)]['lastTicketingDate'])
                 Stops.append(str(response.data[int(x)]['itineraries'][0]['segments'][0]['numberOfStops']))
-                numberOfBookableSeats.append(response.data[0]['numberOfBookableSeats'])
-                cabin.append(response.data[0]['travelerPricings'][0]['fareDetailsBySegment'][0]['cabin'])
+                numberOfBookableSeats.append(response.data[x]['numberOfBookableSeats'])
+                cabin.append(response.data[x]['travelerPricings'][0]['fareDetailsBySegment'][0]['cabin'])
+
             
             return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
         else:
@@ -120,11 +119,25 @@ def paging():
     pagination_Stops = get_paging_Stops(offset=offset, per_page=20)
     pagination_Cabin = get_paging_Cabin(offset=offset, per_page=20)
     pagination_Seats = get_paging_Seats(offset=offset, per_page=20)
-    if(ShowMoreColumns):
-        return render_template('Results.html', pricelist=pagination_prices, airCodes=pagination_airCodes , date = pagination_Date, stops = pagination_Stops, page=page, per_page=per_page, pagination=pagination,seats = pagination_Seats, cabins= pagination_Cabin, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = True)
-    else:
-        return render_template('Results.html', pricelist=pagination_prices, airCodes=pagination_airCodes , date = pagination_Date, stops = pagination_Stops, page=page, per_page=per_page, pagination=pagination,seats = 0, cabins= 0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
 
+    # Assuming these variables are set based on some conditions in your application
+    ShowPrice = True
+    ShowCode = True
+    ShowDate = True
+    ShowStops = True
+    ShowMoreColumns = True
+
+    if ShowMoreColumns:
+        return render_template('Results.html', pricelist=pagination_prices, airCodes=pagination_airCodes,
+                               date=pagination_Date, stops=pagination_Stops, page=page, per_page=per_page,
+                               pagination=pagination, seats=pagination_Seats, cabins=pagination_Cabin,
+                               ShowPrice=ShowPrice, ShowCode=ShowCode, ShowDate=ShowDate, ShowStops=ShowStops,
+                               ShowMoreColumns=ShowMoreColumns)
+    else:
+        return render_template('Results.html', pricelist=pagination_prices, airCodes=pagination_airCodes,
+                               date=pagination_Date, stops=pagination_Stops, page=page, per_page=per_page,
+                               pagination=pagination, seats=0, cabins=0, ShowPrice=ShowPrice, ShowCode=ShowCode,
+                               ShowDate=ShowDate, ShowStops=ShowStops, ShowMoreColumns=ShowMoreColumns)
 
 
 #Sort Region
