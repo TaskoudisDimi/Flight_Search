@@ -1,4 +1,0 @@
-pip
-amadeus
-Flask
-flask-paginate

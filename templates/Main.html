@@ -18,10 +18,10 @@
                 <a class="nav-link" href="/Home">Home</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/Project">Project</a>
+                <a class="nav-link active" href="/Project">Project</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link active" href="/Student">Student Details</a>
+                <a class="nav-link " href="/Student">Student Details</a>
             </li>
         </ul>
     </div>
@@ -30,7 +30,7 @@
 <div class="container mt-4">
     <h2>Inputs</h2>
     <fieldset>
-        <form action="{{ url_for("getData")}}" method="post">
+        <form action="{{ url_for("flight_controller.getData")}}" method="post">
             <div class="form-group">
                 <label for="StartCode">Start Code:</label>
                 <input type="text" class="form-control" id="StartCode" name="StartCode" placeholder="StartCode">
@@ -46,7 +46,7 @@
             <button type="submit" class="btn btn-primary">Search</button>
         </form>
 
-        <form action="{{ url_for("getCountryCodes")}}" method="post">
+        <form action="{{ url_for("flight_controller.getCountryCodes")}}" method="post">
             <button type="submit" class="btn btn-secondary mt-3">Get Country Codes</button>
         </form>
     </fieldset>

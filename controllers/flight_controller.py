@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request
+from flask import Blueprint, request, jsonify, render_template
+from services.flight_service import search_flights
 from amadeus import Client, ResponseError
-import logging
-from flask_paginate import Pagination, get_page_parameter,get_page_args
 import json
+from flask_paginate import Pagination, get_page_parameter,get_page_args
+import logging
 
-app = Flask(__name__)
+bp = Blueprint('flight_controller', __name__)
+
 
 priceList = []
 AirCodes = []
@@ -24,26 +26,21 @@ ShowMoreColumns = True
 with open('countries.json', 'r') as json_file:
     data = json.load(json_file)
 
-app = Flask(__name__, template_folder='templates')
-
-
-
-
 #Route basic HTMLs
-@app.route('/Home', methods=['GET', 'POST'])
+@bp.route('/Home', methods=['GET', 'POST'])
 def home():
     return render_template('Home.html') 
 
-@app.route('/Project', methods=['GET', 'POST'])
+@bp.route('/Project', methods=['GET', 'POST'])
 def project():
     return render_template('Main.html') 
 
-@app.route('/Student', methods=['GET', 'POST'])
+@bp.route('/Student', methods=['GET', 'POST'])
 def student():
     return render_template('Student_Details.html') 
 
 #Route basic HTMLs
-@app.route('/getCountryCodes', methods=['GET', 'POST'])
+@bp.route('/getCountryCodes', methods=['GET', 'POST'])
 def getCountryCodes():
     search_term = request.form.get('search_term', '')
 
@@ -56,30 +53,27 @@ def getCountryCodes():
 
 
 # Display Data Region
-@app.route('/', methods=['GET', 'POST'])
+@bp.route('/', methods=['GET', 'POST'])
 def getData():
     try:
         if request.method == "POST":
             Start_Code = request.form.get("StartCode")
             date = request.form.get("StartDate")  
             Dest_Code = request.form.get("DestCode")
+           
+            response = search_flights(Start_Code, Dest_Code, date)
+            print("Response from API:", response)
             
-            amadeus = Client(
-            client_id='miTq9txNAlSY1q68fGwDP8E5bFQ8OPVo', 
-            client_secret='QN6hvjLj2KVFfkUG',
-            log_level=logging.INFO)
-            response = amadeus.shopping.flight_offers_search.get(originLocationCode=Start_Code, destinationLocationCode=Dest_Code, departureDate=date, adults=1)
-
             length = len(response.data)
             print("length of data is : " + str(length))
            
             for x in range(0,length):
-                priceList.append(response.data[int(x)]['price']['grandTotal'])
-                AirCodes.append(response.data[int(x)]['validatingAirlineCodes'])
-                Date.append(response.data[int(x)]['lastTicketingDate'])
-                Stops.append(str(response.data[int(x)]['itineraries'][0]['segments'][0]['numberOfStops']))
-                numberOfBookableSeats.append(response.data[0]['numberOfBookableSeats'])
-                cabin.append(response.data[0]['travelerPricings'][0]['fareDetailsBySegment'][0]['cabin'])
+                priceList.bpend(response.data[int(x)]['price']['grandTotal'])
+                AirCodes.bpend(response.data[int(x)]['validatingAirlineCodes'])
+                Date.bpend(response.data[int(x)]['lastTicketingDate'])
+                Stops.bpend(str(response.data[int(x)]['itineraries'][0]['segments'][0]['numberOfStops']))
+                numberOfBookableSeats.bpend(response.data[0]['numberOfBookableSeats'])
+                cabin.bpend(response.data[0]['travelerPricings'][0]['fareDetailsBySegment'][0]['cabin'])
             
             return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
         else:
@@ -117,7 +111,7 @@ def get_paging_Cabin(offset, per_page):
 def get_paging_Seats(offset, per_page):
     return numberOfBookableSeats[offset:offset + per_page]
 
-@app.route('/paging', methods=['GET', 'POST'])
+@bp.route('/paging', methods=['GET', 'POST'])
 def paging():
     page, per_page, offset = get_page_args(page_parameter='page', per_page_parameter='per_page')
     
@@ -137,7 +131,7 @@ def paging():
 
 
 #Sort Region
-@app.route('/sortPrices', methods=['GET', 'POST'])
+@bp.route('/sortPrices', methods=['GET', 'POST'])
 def sortPrices():
     try:
         sort = sorted(priceList)
@@ -145,7 +139,7 @@ def sortPrices():
     except ResponseError as error:
         print(error)
 
-@app.route('/sortDate', methods=['GET', 'POST'])
+@bp.route('/sortDate', methods=['GET', 'POST'])
 def sortDate():
     try:
         sort = sorted(Date)
@@ -153,7 +147,7 @@ def sortDate():
     except ResponseError as error:
         print(error)
 
-@app.route('/sortCodes', methods=['GET', 'POST'])
+@bp.route('/sortCodes', methods=['GET', 'POST'])
 def sortCodes():
     try:
         sort = sorted(AirCodes)
@@ -161,7 +155,7 @@ def sortCodes():
     except ResponseError as error:
         print(error)
 
-@app.route('/sortStops', methods=['GET', 'POST'])
+@bp.route('/sortStops', methods=['GET', 'POST'])
 def sortStops():
     try:
         sort = sorted(Stops)
@@ -169,7 +163,7 @@ def sortStops():
     except ResponseError as error:
         print(error)
 
-@app.route('/sortSeats', methods=['GET', 'POST'])
+@bp.route('/sortSeats', methods=['GET', 'POST'])
 def sortSeats():
     try:
         sort = sorted(numberOfBookableSeats)
@@ -177,7 +171,7 @@ def sortSeats():
     except ResponseError as error:
         print(error)
 
-@app.route('/sortCabin', methods=['GET', 'POST'])
+@bp.route('/sortCabin', methods=['GET', 'POST'])
 def sortCabin():
     try:
         sort = sorted(cabin)
@@ -188,7 +182,7 @@ def sortCabin():
 
 
 #More/Some DATA
-@app.route('/allData', methods=['GET', 'POST'])
+@bp.route('/allData', methods=['GET', 'POST'])
 def allData():
     try:
         ShowMoreColumns = True
@@ -196,7 +190,7 @@ def allData():
     except ResponseError as error:
         print(error)
 
-@app.route('/someData', methods=['GET', 'POST'])
+@bp.route('/someData', methods=['GET', 'POST'])
 def someData():
     try:
         ShowMoreColumns = False
@@ -206,21 +200,21 @@ def someData():
 
 
 #HIDE COLUMNS
-@app.route('/hidePrices', methods=['GET', 'POST'])
+@bp.route('/hidePrices', methods=['GET', 'POST'])
 def HidePrices():
     try:
         return render_template('Results.html', airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = False, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
     except ResponseError as error:
         print(error)
 
-@app.route('/HideCodes', methods=['GET', 'POST'])
+@bp.route('/HideCodes', methods=['GET', 'POST'])
 def HideCodes():
     try:
         return render_template('Results.html', pricelist = priceList, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = False, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
     except ResponseError as error:
         print(error)
 
-@app.route('/HideStops', methods=['GET', 'POST'])
+@bp.route('/HideStops', methods=['GET', 'POST'])
 def HideStops():
     try:
         return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = False,ShowMoreColumns = False)
@@ -228,7 +222,7 @@ def HideStops():
         print(error)
 
 
-@app.route('/HideDate', methods=['GET', 'POST'])
+@bp.route('/HideDate', methods=['GET', 'POST'])
 def HideDate():
     try:
         return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = False, ShowStops = True,ShowMoreColumns = False)
@@ -237,38 +231,32 @@ def HideDate():
 
 
 #SHOW COLUMNS
-@app.route('/showPrices', methods=['GET', 'POST'])
+@bp.route('/showPrices', methods=['GET', 'POST'])
 def showPrices():
     try:
         return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
     except ResponseError as error:
         print(error)
 
-@app.route('/showCode', methods=['GET', 'POST'])
+@bp.route('/showCode', methods=['GET', 'POST'])
 def showCode():
     try:
         return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
     except ResponseError as error:
         print(error)
 
-@app.route('/showDate', methods=['GET', 'POST'])
+@bp.route('/showDate', methods=['GET', 'POST'])
 def showDate():
     try:
         return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
     except ResponseError as error:
         print(error)
 
-@app.route('/showStops', methods=['GET', 'POST'])
+@bp.route('/showStops', methods=['GET', 'POST'])
 def showStops():
     try:
         return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
     except ResponseError as error:
         print(error)
 
-
-
-
-
-if __name__ == '__main__':
-   app.run(debug=True)
 

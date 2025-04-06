@@ -5,8 +5,11 @@ The project is built with the **Flask Framework** and every time the user search
 ## **Run app**
 To run the application on Windows, you need to execute the following commands: 
 * installation of all necessary libraries
-```pip install -r req.txt``` 
+```python -m venv venv```
+```source venv/bin/activate   # On Windows, use `venv\Scripts\activate` ```
+```pip install -r requirements.txt```
 * running application 
 ```python Flask.py``` 
 * open the following address in the browser 
 http://127.0.0.1:5000/
+
