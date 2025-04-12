@@ -26,31 +26,33 @@
         </ul>
     </div>
 </nav>
-
 <div class="container mt-4">
-    <h2>Inputs</h2>
+    <h2>Search Flights</h2>
     <fieldset>
+        <!-- Main flight search form -->
         <form action="{{ url_for("flight_controller.getData")}}" method="post">
             <div class="form-group">
-                <label for="StartCode">Start Code:</label>
-                <input type="text" class="form-control" id="StartCode" name="StartCode" placeholder="StartCode">
+                <label for="StartCode">Departure Country:</label>
+                <input type="text" class="form-control" id="StartCode" name="StartCode" placeholder="e.g., France">
             </div>
             <div class="form-group">
-                <label for="DestCode">Destination Code:</label>
-                <input type="text" class="form-control" id="DestCode" name="DestCode" placeholder="Destination Code">
+                <label for="DestCode">Destination Country:</label>
+                <input type="text" class="form-control" id="DestCode" name="DestCode" placeholder="e.g., Germany">
             </div>
             <div class="form-group">
-                <label for="StartDate">Start Date:</label>
-                <input type="date" class="form-control" id="StartDate" name="StartDate" placeholder="StartDate">
+                <label for="StartDate">Departure Date:</label>
+                <input type="date" class="form-control" id="StartDate" name="StartDate" placeholder="YYYY-MM-DD">
             </div>
             <button type="submit" class="btn btn-primary">Search</button>
         </form>
 
-        <form action="{{ url_for("flight_controller.getCountryCodes")}}" method="post">
-            <button type="submit" class="btn btn-secondary mt-3">Get Country Codes</button>
+        <!-- Optional: country codes reference -->
+        <form action="{{ url_for("flight_controller.list_airports")}}" method="get">
+            <button type="submit" class="btn btn-secondary mt-3">Navigate to Airports per Country</button>
         </form>
     </fieldset>
 </div>
+
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>

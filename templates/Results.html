@@ -29,220 +29,75 @@
       </div>
   </nav>
 
-  <div class="buttons">
-   <form action="{{ url_for("allData") }}" method="post">
-       <button class="btn-custom">More Columns</button>
-   </form>
-   <form action="{{ url_for("someData") }}" method="post">
-       <button class="btn-custom">Hide Columns</button>
-   </form>
-   <form action="{{ url_for("paging") }}" method="get"> <!-- Change method to "get" -->
-      <button class="btn-custom" type="submit">Paging</button>
-  </form>
-</div>
- 
 
-<main>
-   <div class="columns">
-       <section class="column">
-           <fieldset>
-               <legend>Prices</legend>
-               <div class="table-container">
-                   <table>
-                       <thead>
-                           <tr>
-                               <th>
-                                   {% if ShowPrice %}
-                                       <form action="{{ url_for("HidePrices") }}" method="post">
-                                           <button class="btn-hide">Hide</button>
-                                       </form>
-                                   {% else %}
-                                       <form action="{{ url_for("showPrices") }}" method="post">
-                                           <button class="btn-show">Show</button>
-                                       </form>
-                                   {% endif %}
-                               </th>
-                               {% if ShowPrice %}
-                                   <th>
-                                       <form action="{{ url_for("sortPrices") }}" method="post">
-                                           <button class="btn-sort">Sort</button>
-                                       </form>
-                                   </th>
-                               {% endif %}
-                           </tr>
-                       </thead>
-                       <tbody>
-                           {% for row in pricelist %}
-                               <tr>
-                                   <td>{{ row }}</td>
-                               </tr>
-                           {% endfor %}
-                       </tbody>
-                   </table>
-               </div>
-           </fieldset>
-       </section>
+  <main>
+    <div class="columns">
+        {% for section, data in [('Prices', pricelist), ('Stops', stops), ('Date', date), ('Seats', seats), ('Cabin', cabins)] %}
+            <section class="column">
+                <fieldset>
+                    <legend>{{ section }}</legend>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <form action="{{ url_for('flight_controller.sort_column', column=section|lower) }}" method="post">
+                                            <button class="btn-sort">Sort</button>
+                                        </form>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in data %}
+                                    <tr>
+                                        {% if section == 'Prices' %}
+                                            <td>&euro; {{ row }}</td>  <!-- Add Euro symbol here -->
+                                        {% else %}
+                                            <td>{{ row }}</td>
+                                        {% endif %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </fieldset>
+            </section>
+        {% endfor %}
+    </div>
+    {% if pagination is none %}
+    <!-- Pagination is None, do something here if needed -->
+    <p>No pagination available.</p>
+    {% else %}
+        <!-- Pagination is not None, render pagination controls -->
+        <div class="pagination">
+            <span>Page {{ page }} of {{ pagination.total }}</span>
 
-       <!-- Repeat similar structure for other sections -->
+            {% if page > 1 %}
+                <a href="{{ url_for('flight_controller.paging', page=page - 1, per_page=per_page) }}" class="btn-custom">Previous</a>
+            {% endif %}
+            
+            {% if page < pagination.total %}
+                <a href="{{ url_for('flight_controller.paging', page=page + 1, per_page=per_page) }}" class="btn-custom">Next</a>
+            {% endif %}
 
-       <section class="column">
-           <fieldset>
-               <legend>AirCodes</legend>
-               <div class="table-container">
-                   <table>
-                       <thead>
-                           <tr>
-                               <th>
-                                   {% if ShowCode %}
-                                       <form action="{{ url_for("HideCodes") }}" method="post">
-                                           <button class="btn-hide">Hide</button>
-                                       </form>
-                                   {% else %}
-                                       <form action="{{ url_for("showCode") }}" method="post">
-                                           <button class="btn-show">Show</button>
-                                       </form>
-                                   {% endif %}
-                               </th>
-                               {% if ShowCode %}
-                                   <th>
-                                       <form action="{{ url_for("sortCodes") }}" method="post">
-                                           <button class="btn-sort">Sort</button>
-                                       </form>
-                                   </th>
-                               {% endif %}
-                           </tr>
-                       </thead>
-                       <tbody>
-                           {% for row in airCodes %}
-                               <tr>
-                                   {% for cell in row %}
-                                       <td>{{ cell }}</td>
-                                   {% endfor %}
-                               </tr>
-                           {% endfor %}
-                       </tbody>
-                   </table>
-               </div>
-           </fieldset>
-       </section>
+            <form method="get" action="{{ url_for('flight_controller.paging', page=page) }}">
+                <label for="per_page">Items per page: </label>
+                <select name="per_page" onchange="this.form.submit()">
+                    <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                    <option value="15" {% if per_page == 15 %}selected{% endif %}>15</option>
+                    <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                </select>
+            </form>
+        </div>
+    {% endif %}
 
-       <!-- Repeat similar structure for remaining sections -->
-
-       {% if ShowStops %}
-           <section class="column">
-               <fieldset>
-                   <legend>Stops</legend>
-                   <div class="table-container">
-                       <table>
-                           <thead>
-                               <tr>
-                                   <th>
-                                       <form action="{{ url_for("sortStops") }}" method="post">
-                                           <button class="btn-sort">Sort</button>
-                                       </form>
-                                   </th>
-                               </tr>
-                           </thead>
-                           <tbody>
-                               {% for row in stops %}
-                                   <tr>
-                                       {% for cell in row %}
-                                           <td>{{ cell }}</td>
-                                       {% endfor %}
-                                   </tr>
-                               {% endfor %}
-                           </tbody>
-                       </table>
-                   </div>
-               </fieldset>
-           </section>
-       {% endif %}
-
-       {% if ShowDate %}
-           <section class="column">
-               <fieldset>
-                   <legend>Date</legend>
-                   <div class="table-container">
-                       <table>
-                           <thead>
-                               <tr>
-                                   <th>
-                                       <form action="{{ url_for("sortDate") }}" method="post">
-                                           <button class="btn-sort">Sort</button>
-                                       </form>
-                                   </th>
-                               </tr>
-                           </thead>
-                           <tbody>
-                               {% for row in date %}
-                                   <tr>
-                                       <td>{{ row }}</td>
-                                   </tr>
-                               {% endfor %}
-                           </tbody>
-                       </table>
-                   </div>
-               </fieldset>
-           </section>
-       {% endif %}
-
-       {% if ShowMoreColumns %}
-           <section class="column">
-               <fieldset>
-                   <legend>Seats</legend>
-                   <div class="table-container">
-                       <table>
-                           <thead>
-                               <tr>
-                                   <th>
-                                       <form action="{{ url_for("sortSeats") }}" method="post">
-                                           <button class="btn-sort">Sort</button>
-                                       </form>
-                                   </th>
-                               </tr>
-                           </thead>
-                           <tbody>
-                               {% for row in seats %}
-                                   <tr>
-                                       <td>{{ row }}</td>
-                                   </tr>
-                               {% endfor %}
-                           </tbody>
-                       </table>
-                   </div>
-               </fieldset>
-           </section>
-
-           <section class="column">
-               <fieldset>
-                   <legend>Cabin</legend>
-                   <div class="table-container">
-                       <table>
-                           <thead>
-                               <tr>
-                                   <th>
-                                       <form action="{{ url_for("sortCabin") }}" method="post">
-                                           <button class="btn-sort">Sort</button>
-                                       </form>
-                                   </th>
-                               </tr>
-                           </thead>
-                           <tbody>
-                               {% for row in cabins %}
-                                   <tr>
-                                       <td>{{ row }}</td>
-                                   </tr>
-                               {% endfor %}
-                           </tbody>
-                       </table>
-                   </div>
-               </fieldset>
-           </section>
-       {% endif %}
-   </div>
 
 
 </main>
+
+
+
+
 
    
 <style>
@@ -268,12 +123,6 @@
 
    .buttons {
        margin: 10px;
-   }
-
-   .show-button {
-       position: sticky;
-       top: 0;
-       background-color: white;
    }
 
    .btn-custom {
@@ -339,6 +188,32 @@
        flex: 1;
        margin-right: 20px; /* Adjust as needed */
    }
+   .pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.pagination a {
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: #ffffff;
+    text-decoration: none;
+    margin: 0 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.pagination a:hover {
+    background-color: #0056b3;
+}
+
+.pagination span {
+    align-self: center;
+    font-size: 16px;
+    margin: 0 10px;
+}
 
    @media (max-width: 767px) {
        .buttons {
@@ -368,6 +243,7 @@
            margin-bottom: 20px;
        }
    }
+
 </style>
   
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

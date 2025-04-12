@@ -4,27 +4,46 @@ from amadeus import Client, ResponseError
 import json
 from flask_paginate import Pagination, get_page_parameter,get_page_args
 import logging
+import csv
+
 
 bp = Blueprint('flight_controller', __name__)
 
 
 priceList = []
-AirCodes = []
 Date = []
 Stops = []
 numberOfBookableSeats = []
 cabin = []
 
-ShowPrice = True
-ShowCode = True
-ShowStops = True
-ShowDate = True
 
-ShowMoreColumns = True
+airports_list = []
 
-# Load the JSON data once when the app starts
-with open('countries.json', 'r') as json_file:
-    data = json.load(json_file)
+# Constants for paging
+ITEMS_PER_PAGE = 3  # Change this to whatever number of items you want per page
+
+with open('airports.dat', encoding='utf-8') as file:
+    reader = csv.reader(file)
+    for row in reader:
+        iata = row[4].strip()
+        city = row[2].strip()
+        country = row[3].strip()
+
+        if iata and len(iata) == 3:  # filter only valid IATA codes
+            airports_list.append({
+                "city": city,
+                "country": country,
+                "iata_code": iata
+            })
+
+# Save to JSON file
+with open('airports.json', 'w', encoding='utf-8') as json_file:
+    json.dump(airports_list, json_file, indent=4)
+
+with open('airports.json', 'r', encoding='utf-8') as file:
+    airports_data = json.load(file)
+
+
 
 #Route basic HTMLs
 @bp.route('/Home', methods=['GET', 'POST'])
@@ -39,45 +58,127 @@ def project():
 def student():
     return render_template('Student_Details.html') 
 
-#Route basic HTMLs
-@bp.route('/getCountryCodes', methods=['GET', 'POST'])
-def getCountryCodes():
-    search_term = request.form.get('search_term', '')
 
-    # Filter the data based on the search term
-    filtered_data = [entry for entry in data if search_term.lower() in entry['country_name'].lower()]
+@bp.route('/airports', methods=['GET'])
+def list_airports():
+    search_term = request.args.get('search_term', '').strip().lower()
 
-    return render_template('CountryCodes.html', data=filtered_data, search_term=search_term)
+    # Just get unique combinations
+    seen = set()
+    table_data = []
 
-    
+    for entry in airports_data:
+        key = (entry['city'], entry['country'], entry['iata_code'])
+        if key not in seen:
+            seen.add(key)
+
+            # Check if search term matches any field
+            if search_term:
+                if (search_term in entry['city'].lower() or
+                    search_term in entry['country'].lower() or
+                    search_term in entry['iata_code'].lower()):
+                    table_data.append({
+                        'city': entry['city'],
+                        'country': entry['country'],
+                        'iata_code': entry['iata_code']
+                    })
+            else:
+                table_data.append({
+                    'city': entry['city'],
+                    'country': entry['country'],
+                    'iata_code': entry['iata_code']
+                })
+
+    # Sort the data based on the search term
+    if search_term:
+        # Check if search term is a country, city, or IATA code
+        if search_term.isalpha():  # If the search term consists of alphabets, assume it's country or city
+            table_data.sort(key=lambda x: (x['city'].lower(), x['country'].lower(), x['iata_code'].lower()))
+        else:  # If the search term is alphanumeric, assume it's IATA code
+            table_data.sort(key=lambda x: x['iata_code'].lower())
+
+    return render_template('AirportsList.html', airports=table_data, search_term=search_term)
 
 
-# Display Data Region
+
+# Helper to get all template data (without sorting or toggling columns)
+def get_template_data(page=1, per_page=10):
+    offset = (page - 1) * per_page  # Calculate the offset for the current page
+    return {
+        'pricelist': priceList[offset:offset + per_page],
+        'date': Date[offset:offset + per_page],
+        'stops': Stops[offset:offset + per_page],
+        'seats': numberOfBookableSeats[offset:offset + per_page],
+        'cabins': cabin[offset:offset + per_page],
+        'pagination': Pagination(page=page, per_page=per_page, total=len(priceList)),
+        'page': page,
+        'per_page': per_page,
+    }
+@bp.route('/paging', methods=['GET'])
+def paging():
+    # Get the page and per_page values from the query parameters (or default to 1 and 10)
+    page = int(request.args.get('page', 1))  # Default to page 1
+    per_page = int(request.args.get('per_page', 10))  # Default to 10 items per page
+
+    # Call the function to get pagination data, passing page and per_page
+    pagination_data = get_pagination_data(page, per_page)
+
+    # Only render pagination if there are more than 15 items
+    if len(priceList) <= 15:
+        pagination_data['pagination'] = None  # Hide pagination if no need for it
+    else:
+        # Ensure the next and previous buttons work properly
+        if page * per_page >= len(priceList):  # If we're on the last page
+            pagination_data['pagination'] = None  # Hide pagination buttons
+        else:
+            pagination_data['pagination'] = Pagination(page=page, per_page=per_page, total=len(priceList))
+
+    return render_template('Results.html', **pagination_data)
+
+
+# Route to handle the initial data loading
 @bp.route('/', methods=['GET', 'POST'])
 def getData():
     try:
         if request.method == "POST":
-            Start_Code = request.form.get("StartCode")
-            date = request.form.get("StartDate")  
-            Dest_Code = request.form.get("DestCode")
-           
-            response = search_flights(Start_Code, Dest_Code, date)
-            print("Response from API:", response)
-            
+            date = request.form.get("StartDate")
+            start_city = request.form.get("StartCode", "").strip().lower()
+            dest_city = request.form.get("DestCode", "").strip().lower()
+
+            # Look up IATA codes based on city names
+            start_code = next((entry['iata_code'] for entry in airports_data if entry['city'].lower() == start_city), None)
+            dest_code = next((entry['iata_code'] for entry in airports_data if entry['city'].lower() == dest_city), None)
+
+            if not start_code or not dest_code:
+                return render_template('NotFound.html', error_message="City not found or not supported. Please check your input.")
+
+            # Call Amadeus API
+            response = search_flights(start_code, dest_code, date)
+
+            # Clear previous data before appending new results
+            priceList.clear()
+            Date.clear()
+            Stops.clear()
+            numberOfBookableSeats.clear()
+            cabin.clear()
+
             length = len(response.data)
-            print("length of data is : " + str(length))
-           
-            for x in range(0,length):
-                priceList.bpend(response.data[int(x)]['price']['grandTotal'])
-                AirCodes.bpend(response.data[int(x)]['validatingAirlineCodes'])
-                Date.bpend(response.data[int(x)]['lastTicketingDate'])
-                Stops.bpend(str(response.data[int(x)]['itineraries'][0]['segments'][0]['numberOfStops']))
-                numberOfBookableSeats.bpend(response.data[0]['numberOfBookableSeats'])
-                cabin.bpend(response.data[0]['travelerPricings'][0]['fareDetailsBySegment'][0]['cabin'])
-            
-            return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
+
+            for x in range(length):
+                offer = response.data[x]
+                priceList.append(offer['price']['grandTotal'])
+                Date.append(offer['lastTicketingDate'])
+                Stops.append(str(offer['itineraries'][0]['segments'][0]['numberOfStops']))
+                numberOfBookableSeats.append(offer['numberOfBookableSeats'])
+                cabin.append(offer['travelerPricings'][0]['fareDetailsBySegment'][0]['cabin'])
+
+            return render_template(
+                'Results.html',
+                **get_template_data(page=1, per_page=10)  # Return paginated data from the start
+            )
         else:
             return render_template('Home.html')
+
     except ResponseError as error:
         error_message = None
         try:
@@ -85,178 +186,122 @@ def getData():
         except:
             error_message = str(error)
 
-        print("Error from API:", error_message)  # Optional: debug log
         return render_template('NotFound.html', error_message=error_message)
 
+@bp.route('/sort/<column>', methods=['POST'])
+def sort_column(column):
+    # Map each column to the relevant data list
+    data_map = {
+        'prices': priceList,
+        'stops': Stops,
+        'date': Date,
+        'seats': numberOfBookableSeats,
+        'cabin': cabin,
+    }
 
+    # Get the data corresponding to the column being sorted
+    data = data_map.get(column.lower())
 
+    if data:
+        # Check if the sorting should be reversed (toggle sorting order)
+        reverse = False
+        if request.args.get('reverse') == 'true':
+            reverse = True
         
+        # Sort the data and return the updated template with sorted data
+        sorted_data = get_sorted_data(data, column, reverse)
+        
+        # Define pagination values
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 15))  # Get the per_page value dynamically
+        
+        # Get pagination data
+        pagination_data = get_pagination_data(page, per_page, sorted_data)
+        
+        # Return the rendered template with sorted data and pagination
+        return render_template(
+            'Results.html', 
+            **pagination_data
+        )
 
-#PAGING
-def get_paging_prices(offset, per_page):
-    return priceList[offset:offset + per_page]
-
-def get_paging_airCodes(offset, per_page):
-    return AirCodes[offset:offset + per_page]
-
-def get_paging_Date(offset, per_page):
-    return Date[offset:offset + per_page]
-
-def get_paging_Stops(offset, per_page):
-    return Stops[offset:offset + per_page]
-
-def get_paging_Cabin(offset, per_page):
-    return cabin[offset:offset + per_page]
-
-def get_paging_Seats(offset, per_page):
-    return numberOfBookableSeats[offset:offset + per_page]
-
-@bp.route('/paging', methods=['GET', 'POST'])
-def paging():
-    page, per_page, offset = get_page_args(page_parameter='page', per_page_parameter='per_page')
-    
-    total = len(priceList)
-    pagination = Pagination(page=page, per_page=per_page, total=total)
-    pagination_prices = get_paging_prices(offset=offset, per_page=20)
-    pagination_airCodes = get_paging_airCodes(offset=offset, per_page=20)
-    pagination_Date = get_paging_Date(offset=offset, per_page=20)
-    pagination_Stops = get_paging_Stops(offset=offset, per_page=20)
-    pagination_Cabin = get_paging_Cabin(offset=offset, per_page=20)
-    pagination_Seats = get_paging_Seats(offset=offset, per_page=20)
-    if(ShowMoreColumns):
-        return render_template('Results.html', pricelist=pagination_prices, airCodes=pagination_airCodes , date = pagination_Date, stops = pagination_Stops, page=page, per_page=per_page, pagination=pagination,seats = pagination_Seats, cabins= pagination_Cabin, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = True)
-    else:
-        return render_template('Results.html', pricelist=pagination_prices, airCodes=pagination_airCodes , date = pagination_Date, stops = pagination_Stops, page=page, per_page=per_page, pagination=pagination,seats = 0, cabins= 0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
+    return "Invalid column", 400
 
 
+from datetime import datetime
+def get_pagination_data(page, per_page, sorted_data=None):
+    # If sorted_data is not passed, use the original data
+    if not sorted_data:
+        sorted_data = {
+            'pricelist': priceList,
+            'stops': Stops,
+            'date': Date,
+            'seats': numberOfBookableSeats,
+            'cabins': cabin
+        }
 
-#Sort Region
-@bp.route('/sortPrices', methods=['GET', 'POST'])
-def sortPrices():
-    try:
-        sort = sorted(priceList)
-        return render_template('Results.html', pricelist = sort, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
+    # Calculate the offset for the current page
+    offset = (page - 1) * per_page
 
-@bp.route('/sortDate', methods=['GET', 'POST'])
-def sortDate():
-    try:
-        sort = sorted(Date)
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = sort, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
+    # Extract the paginated data from sorted_data
+    paginated_data = {
+        'pricelist': sorted_data['pricelist'][offset:offset + per_page],
+        'stops': sorted_data['stops'][offset:offset + per_page],
+        'date': sorted_data['date'][offset:offset + per_page],
+        'seats': sorted_data['seats'][offset:offset + per_page],
+        'cabins': sorted_data['cabins'][offset:offset + per_page]
+    }
 
-@bp.route('/sortCodes', methods=['GET', 'POST'])
-def sortCodes():
-    try:
-        sort = sorted(AirCodes)
-        return render_template('Results.html', pricelist = priceList, airCodes = sort, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
+    # Calculate total items and total pages
+    total_items = len(priceList)
+    total_pages = (total_items // per_page) + (1 if total_items % per_page != 0 else 0)
 
-@bp.route('/sortStops', methods=['GET', 'POST'])
-def sortStops():
-    try:
-        sort = sorted(Stops)
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = sort,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
+    # Create the pagination object only if there are more than one page
+    pagination = None
+    if total_items > per_page:
+        pagination = Pagination(page=page, per_page=per_page, total=total_items)
 
-@bp.route('/sortSeats', methods=['GET', 'POST'])
-def sortSeats():
-    try:
-        sort = sorted(numberOfBookableSeats)
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops, seats = sort, cabins= cabin,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = True)
-    except ResponseError as error:
-        print(error)
-
-@bp.route('/sortCabin', methods=['GET', 'POST'])
-def sortCabin():
-    try:
-        sort = sorted(cabin)
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops, seats = numberOfBookableSeats, cabins= sort,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = True)
-    except ResponseError as error:
-        print(error)
+    return {
+        'pricelist': paginated_data['pricelist'],
+        'stops': paginated_data['stops'],
+        'date': paginated_data['date'],
+        'seats': paginated_data['seats'],
+        'cabins': paginated_data['cabins'],
+        'pagination': pagination,
+        'page': page,
+        'per_page': per_page
+    }
 
 
 
-#More/Some DATA
-@bp.route('/allData', methods=['GET', 'POST'])
-def allData():
-    try:
-        ShowMoreColumns = True
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops, seats = numberOfBookableSeats, cabins= cabin,pagination=0,page=0,per_page=0,ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True, ShowMoreColumns = True)
-    except ResponseError as error:
-        print(error)
+def get_sorted_data(data, column, reverse=False):
+    # Combine all data into a single list of tuples
+    combined_data = list(zip(priceList, Stops, Date, numberOfBookableSeats, cabin))
 
-@bp.route('/someData', methods=['GET', 'POST'])
-def someData():
-    try:
-        ShowMoreColumns = False
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True, ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
+    # Determine which column to sort by
+    if column == 'prices':
+        # Sort by the price column (index 0 of the tuple)
+        combined_data.sort(key=lambda x: x[0], reverse=reverse)
+    elif column == 'stops':
+        # Sort by the stops column (index 1 of the tuple)
+        combined_data.sort(key=lambda x: x[1], reverse=reverse)
+    elif column == 'date':
+        # Sort by the date column (index 2 of the tuple)
+        combined_data.sort(key=lambda x: datetime.strptime(x[2], '%Y-%m-%d'), reverse=reverse)
+    elif column == 'seats':
+        # Sort by the seats column (index 3 of the tuple)
+        combined_data.sort(key=lambda x: x[3], reverse=reverse)
+    elif column == 'cabin':
+        # Sort by the cabin column (index 4 of the tuple)
+        combined_data.sort(key=lambda x: x[4], reverse=reverse)
 
+    # Unzip the combined data back into individual lists
+    sorted_pricelist, sorted_stops, sorted_date, sorted_seats, sorted_cabins = zip(*combined_data)
 
-#HIDE COLUMNS
-@bp.route('/hidePrices', methods=['GET', 'POST'])
-def HidePrices():
-    try:
-        return render_template('Results.html', airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = False, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
-
-@bp.route('/HideCodes', methods=['GET', 'POST'])
-def HideCodes():
-    try:
-        return render_template('Results.html', pricelist = priceList, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = False, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
-
-@bp.route('/HideStops', methods=['GET', 'POST'])
-def HideStops():
-    try:
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = False,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
-
-
-@bp.route('/HideDate', methods=['GET', 'POST'])
-def HideDate():
-    try:
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = False, ShowStops = True,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
-
-
-#SHOW COLUMNS
-@bp.route('/showPrices', methods=['GET', 'POST'])
-def showPrices():
-    try:
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
-
-@bp.route('/showCode', methods=['GET', 'POST'])
-def showCode():
-    try:
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
-
-@bp.route('/showDate', methods=['GET', 'POST'])
-def showDate():
-    try:
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
-
-@bp.route('/showStops', methods=['GET', 'POST'])
-def showStops():
-    try:
-        return render_template('Results.html', pricelist = priceList, airCodes = AirCodes, date = Date, stops = Stops,pagination=0,page=0,per_page=0, ShowPrice = True, ShowCode = True, ShowDate = True, ShowStops = True,ShowMoreColumns = False)
-    except ResponseError as error:
-        print(error)
-
-
+    # Return the sorted data in a dictionary
+    return {
+        'pricelist': list(sorted_pricelist),
+        'stops': list(sorted_stops),
+        'date': list(sorted_date),
+        'seats': list(sorted_seats),
+        'cabins': list(sorted_cabins)
+    }
