@@ -3,7 +3,6 @@ blinker==1.7.0
 click==8.1.7
 cv==1.0.0
 Flask==3.0.2
-Flask-MySQLdb==2.0.0
 flask-paginate==2024.4.12
 Flask-WTF==1.2.1
 itsdangerous==2.1.2
